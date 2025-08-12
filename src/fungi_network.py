@@ -6,7 +6,11 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader, Dataset
 from albumentations import Compose, Normalize, Resize
-from albumentations import RandomResizedCrop, HorizontalFlip, VerticalFlip, RandomBrightnessContrast
+from albumentations import (RandomResizedCrop, 
+                            HorizontalFlip, 
+                            VerticalFlip, 
+                            RandomBrightnessContrast,
+                            GaussianBlur)
 from albumentations.pytorch import ToTensorV2
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
@@ -21,6 +25,7 @@ import csv
 from collections import Counter
 import argparse
 from pathlib import Path
+from monai.losses import FocalLoss
 this_path = Path().resolve()
 
 def parse_args():
@@ -30,6 +35,9 @@ def parse_args():
     parser.add_argument('--session_name', '-s', type=str, default='EfficientNet', help='Session name for the experiment')
     parser.add_argument('--workers', type=int, default=4, help='Number of workers for DataLoader')
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size for train/test.')
+    parser.add_argument('--model', type=str, default='efficientnet', help='Model architecture to use')
+    parser.add_argument('--loss_type', type=str, default='cross_entropy', choices=['cross_entropy', 'focal'], help='Loss function to use')
+    parser.add_argument('--use_weighted_sampler', action='store_true', help='Use weighted sampler for training')
 
     return parser.parse_args()
 
@@ -77,6 +85,10 @@ def get_transforms(data):
             HorizontalFlip(p=0.5),
             VerticalFlip(p=0.5),
             RandomBrightnessContrast(p=0.2),
+            GaussianBlur(sigma_limit=(0.5, 2.0),
+                         blur_limit=(6, 6),
+                         p=0.5
+                         ),
             Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
             ToTensorV2(),
         ])
@@ -119,7 +131,14 @@ class FungiDataset(Dataset):
 
         return image, label, file_path
 
-def train_fungi_network(data_file, image_path, checkpoint_dir, workers=4):
+def train_fungi_network(data_file,
+                        image_path,
+                        checkpoint_dir,
+                        workers=4,
+                        batch_size=32,
+                        model_name='efficientnet',
+                        loss_type='cross_entropy',
+                        use_weighted_sampler=False):
     """
     Train the network and save the best models based on validation accuracy and loss.
     Incorporates early stopping with a patience of 10 epochs.
@@ -133,6 +152,9 @@ def train_fungi_network(data_file, image_path, checkpoint_dir, workers=4):
 
     # Load metadata
     df = pd.read_csv(data_file)
+    class_weights = pd.read_csv(Path(data_file).parent / 'class_weights.csv')
+    class_weights.sort_values(by='class', inplace=True)
+    class_weights = class_weights.weight.values
     train_df = df[df['filename_index'].str.startswith('fungi_train')]
     train_df, val_df = train_test_split(train_df, test_size=0.2, random_state=42)
     print('Training size', len(train_df))
@@ -141,21 +163,60 @@ def train_fungi_network(data_file, image_path, checkpoint_dir, workers=4):
     # Initialize DataLoaders
     train_dataset = FungiDataset(train_df, image_path, transform=get_transforms(data='train'))
     valid_dataset = FungiDataset(val_df, image_path, transform=get_transforms(data='valid'))
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=workers)
-    valid_loader = DataLoader(valid_dataset, batch_size=32, shuffle=False, num_workers=workers)
+    
+    if use_weighted_sampler:
+        target = train_df.taxonID_index.astype(int).values
+        weight = 1. / train_df.taxonID_index.value_counts().values
+        samples_weight = np.array([weight[t] for t in target])
+        samples_weight = torch.from_numpy(samples_weight)
+        samples_weight = samples_weight.double()
+        train_sampler = torch.utils.data.WeightedRandomSampler(samples_weight,
+                                                               len(samples_weight),
+                                                               replacement=True)
+        train_loader = DataLoader(train_dataset,
+                                  batch_size=batch_size,
+                                  sampler=train_sampler,
+                                  num_workers=workers,
+                                  drop_last=True,
+                                  pin_memory=True)
+    else:
+        train_loader = DataLoader(train_dataset,
+                                  batch_size=batch_size,
+                                  shuffle=True,
+                                  num_workers=workers,
+                                  drop_last=True,
+                                  pin_memory=True)
+    valid_loader = DataLoader(valid_dataset,
+                              batch_size=batch_size,
+                              shuffle=False,
+                              num_workers=workers,
+                              drop_last=False,
+                              pin_memory=True)
 
     # Network Setup
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = models.efficientnet_b0(weights='DEFAULT')
-    model.classifier = nn.Sequential(
-        nn.Dropout(0.2),
-        nn.Linear(model.classifier[1].in_features, len(train_df['taxonID_index'].unique()))
-    )
+    if model_name == 'efficientnet':
+        model = models.efficientnet_b0(weights='DEFAULT')
+        model.classifier = nn.Sequential(
+            nn.Dropout(0.2),
+            nn.Linear(model.classifier[1].in_features, len(train_df['taxonID_index'].unique()))
+        )
+    elif model_name == 'vit_b':
+        model = models.vit_b_16(weights='DEFAULT')
+        model.heads = nn.Sequential(
+            nn.Linear(model.hidden_dim, len(train_df['taxonID_index'].unique()))
+        )
     model.to(device)
 
     # Define Optimization, Scheduler, and Criterion
     optimizer = Adam(model.parameters(), lr=0.001)
     scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.9, patience=1, eps=1e-6)
+    if loss_type == "cross_entropy":
+        criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
+    elif loss_type == "focal":
+        criterion = FocalLoss(weight=class_weights,
+                                to_onehot_y=True,
+                                use_softmax=True)
     criterion = nn.CrossEntropyLoss()
 
     # Early stopping setup
@@ -245,7 +306,12 @@ def train_fungi_network(data_file, image_path, checkpoint_dir, workers=4):
             print(f"Early stopping triggered. No improvement in validation loss for {patience} epochs.")
             break
 
-def evaluate_network_on_test_set(data_file, image_path, checkpoint_dir, session_name):
+def evaluate_network_on_test_set(data_file,
+                                 image_path,
+                                 checkpoint_dir,
+                                 session_name,
+                                 workers=4,
+                                 batch_size=32):
     """
     Evaluate network on the test set and save predictions to a CSV file.
     """
@@ -259,7 +325,7 @@ def evaluate_network_on_test_set(data_file, image_path, checkpoint_dir, session_
     df = pd.read_csv(data_file)
     test_df = df[df['filename_index'].str.startswith('fungi_test')]
     test_dataset = FungiDataset(test_df, image_path, transform=get_transforms(data='valid'))
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=4)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=workers)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = models.efficientnet_b0(weights='DEFAULT')
@@ -288,6 +354,7 @@ def evaluate_network_on_test_set(data_file, image_path, checkpoint_dir, session_
 
 if __name__ == "__main__":
     args = parse_args()
+    print(args)
     # Path to fungi images
     image_path = args.dataset
     # Path to metadata file
@@ -304,5 +371,12 @@ if __name__ == "__main__":
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     print(f'Checkpoint directory created at: {checkpoint_dir}')
 
-    train_fungi_network(str(data_file), str(image_path), str(checkpoint_dir), workers=args.workers)
+    train_fungi_network(str(data_file),
+                        str(image_path),
+                        str(checkpoint_dir),
+                        workers=args.workers,
+                        batch_size=args.batch_size,
+                        model_name=args.model,
+                        loss_type=args.loss_type,
+                        use_weighted_sampler=args.use_weighted_sampler)
     evaluate_network_on_test_set(str(data_file), str(image_path), str(checkpoint_dir), session)

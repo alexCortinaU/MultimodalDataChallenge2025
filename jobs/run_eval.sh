@@ -15,8 +15,9 @@ dataset_path='data/FungiImages'
 metadata_path="data/${metadata_file}"
 workers=32
 batch_size=32
-model_name='vit_b'
-loss_type='focal'
+model_name='efficientnet'
+output_file_name='val_predictions.csv'
 
-python src/fungi_network.py $dataset_path $metadata_path --session_name $session_name \
---workers $workers --batch_size $batch_size --model $model_name --loss_type $loss_type \
+python src/eval_network.py $dataset_path $metadata_path --session_name $session_name \
+--workers $workers --batch_size $batch_size --model $model_name --outputfile $output_file_name \
+--is_validation
