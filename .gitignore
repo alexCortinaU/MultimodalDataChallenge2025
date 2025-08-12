@@ -172,4 +172,6 @@ __MACOSX/
 # Rasmus stuff
 *_RAPADEBUG*
 
+/data
+
 
