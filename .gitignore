@@ -173,5 +173,7 @@ __MACOSX/
 *_RAPADEBUG*
 
 /data
+/checkpoints
+/jobs/logs
 
 

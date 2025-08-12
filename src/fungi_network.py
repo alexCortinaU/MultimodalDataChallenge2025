@@ -19,6 +19,19 @@ from PIL import Image
 import time
 import csv
 from collections import Counter
+import argparse
+from pathlib import Path
+this_path = Path().resolve()
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Run training')
+    parser.add_argument('dataset', type=str, help='Image folder with dataset to process')
+    parser.add_argument('metadata', type=str, help='Path to the metadata file')
+    parser.add_argument('--session_name', '-s', type=str, default='EfficientNet', help='Session name for the experiment')
+    parser.add_argument('--workers', type=int, default=4, help='Number of workers for DataLoader')
+    parser.add_argument('--batch_size', type=int, default=32, help='Batch size for train/test.')
+
+    return parser.parse_args()
 
 def ensure_folder(folder):
     """
@@ -60,7 +73,7 @@ def get_transforms(data):
     width, height = 224, 224
     if data == 'train':
         return Compose([
-            RandomResizedCrop(width, height, scale=(0.8, 1.0)),
+            RandomResizedCrop(size=(width, height), scale=(0.8, 1.0)),
             HorizontalFlip(p=0.5),
             VerticalFlip(p=0.5),
             RandomBrightnessContrast(p=0.2),
@@ -106,13 +119,13 @@ class FungiDataset(Dataset):
 
         return image, label, file_path
 
-def train_fungi_network(data_file, image_path, checkpoint_dir):
+def train_fungi_network(data_file, image_path, checkpoint_dir, workers=4):
     """
     Train the network and save the best models based on validation accuracy and loss.
     Incorporates early stopping with a patience of 10 epochs.
     """
     # Ensure checkpoint directory exists
-    ensure_folder(checkpoint_dir)
+    # ensure_folder(checkpoint_dir)
 
     # Set Logger
     csv_file_path = os.path.join(checkpoint_dir, 'train.csv')
@@ -128,12 +141,12 @@ def train_fungi_network(data_file, image_path, checkpoint_dir):
     # Initialize DataLoaders
     train_dataset = FungiDataset(train_df, image_path, transform=get_transforms(data='train'))
     valid_dataset = FungiDataset(val_df, image_path, transform=get_transforms(data='valid'))
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4)
-    valid_loader = DataLoader(valid_dataset, batch_size=32, shuffle=False, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=workers)
+    valid_loader = DataLoader(valid_dataset, batch_size=32, shuffle=False, num_workers=workers)
 
     # Network Setup
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = models.efficientnet_b0(pretrained=True)
+    model = models.efficientnet_b0(weights='DEFAULT')
     model.classifier = nn.Sequential(
         nn.Dropout(0.2),
         nn.Linear(model.classifier[1].in_features, len(train_df['taxonID_index'].unique()))
@@ -142,7 +155,7 @@ def train_fungi_network(data_file, image_path, checkpoint_dir):
 
     # Define Optimization, Scheduler, and Criterion
     optimizer = Adam(model.parameters(), lr=0.001)
-    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.9, patience=1, verbose=True, eps=1e-6)
+    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.9, patience=1, eps=1e-6)
     criterion = nn.CrossEntropyLoss()
 
     # Early stopping setup
@@ -249,7 +262,7 @@ def evaluate_network_on_test_set(data_file, image_path, checkpoint_dir, session_
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=4)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = models.efficientnet_b0(pretrained=True)
+    model = models.efficientnet_b0(weights='DEFAULT')
     model.classifier = nn.Sequential(
         nn.Dropout(0.2),
         nn.Linear(model.classifier[1].in_features, 183)  # Number of classes
@@ -274,17 +287,22 @@ def evaluate_network_on_test_set(data_file, image_path, checkpoint_dir, session_
     print(f"Results saved to {output_csv_path}")
 
 if __name__ == "__main__":
+    args = parse_args()
     # Path to fungi images
-    image_path = '/novo/projects/shared_projects/eye_imaging/data/FungiImages/'
+    image_path = args.dataset
     # Path to metadata file
-    data_file = str('/novo/projects/shared_projects/eye_imaging/data/FungiImages/metadata.csv')
+    data_file = args.metadata
+    assert Path(data_file).exists(), f"Metadata file not found: {data_file}"
+    assert Path(image_path).exists(), f"Image folder not found: {image_path}"
 
     # Session name: Change session name for every experiment! 
     # Session name will be saved as the first line of the prediction file
-    session = "EfficientNet"
+    session = args.session_name
 
     # Folder for results of this experiment based on session name:
-    checkpoint_dir = os.path.join(f"/novo/projects/shared_projects/eye_imaging/code/FungiChallenge/results/{session}/")
+    checkpoint_dir = this_path / "checkpoints" / session
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    print(f'Checkpoint directory created at: {checkpoint_dir}')
 
-    train_fungi_network(data_file, image_path, checkpoint_dir)
-    evaluate_network_on_test_set(data_file, image_path, checkpoint_dir, session)
+    train_fungi_network(str(data_file), str(image_path), str(checkpoint_dir), workers=args.workers)
+    evaluate_network_on_test_set(str(data_file), str(image_path), str(checkpoint_dir), session)
