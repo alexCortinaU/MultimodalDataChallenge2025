@@ -13,6 +13,8 @@ class Config:
     def __init__(self):
         parser = argparse.ArgumentParser()
         parser.add_argument("--seed", type=int, default=42)
+        parser.add_argument("--sampler", choices=['random','weighted'], default='random')
+
         args = parser.parse_args()
 
         self.metadata_dir = "/home/malte/projects/MultimodalDataChallenge2025/metadata.csv"
@@ -27,6 +29,7 @@ class Config:
         self.image_size = 518
         self.num_workers = 14
         self.seed = args.seed
+        self.sampler = args.sampler
 
 def get_dataloaders(config):
     # Load metadata
@@ -51,12 +54,20 @@ def get_dataloaders(config):
 
     train_dataset = FungiDataset(train_df, config.image_path, transform=train_transforms)
     valid_dataset = FungiDataset(val_df, config.image_path, transform=val_transforms)
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=config.batch_size,
-        num_workers=config.num_workers,
-        sampler=sampler
-    )
+    if config.sampler is 'random':
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=config.batch_size,
+            num_workers=config.num_workers,
+            shuffle=True
+        )
+    else:
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=config.batch_size,
+            num_workers=config.num_workers,
+            sampler=sampler
+        )
     valid_loader = DataLoader(valid_dataset, batch_size=config.batch_size, shuffle=False, num_workers=config.num_workers)
     return train_loader, valid_loader
 
