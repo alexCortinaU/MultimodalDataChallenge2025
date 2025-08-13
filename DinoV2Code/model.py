@@ -39,7 +39,6 @@ class DinoV2Lit(L.LightningModule):
 
         self.backbone = self._init_backbone(model_name)
         feat_dim = self.backbone.num_features
-
         self.head = nn.Sequential(
             nn.Dropout(drop_rate),
             nn.Linear(feat_dim, feat_dim),

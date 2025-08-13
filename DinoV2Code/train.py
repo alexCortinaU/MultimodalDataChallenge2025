@@ -20,7 +20,6 @@ class Config:
         self.weight_decay = 1e-6
         self.image_size = 518  # Default image size for ViT models
         self.num_workers = 24
-        self.image_size = 518
 
 def get_dataloaders(config):
     # Load metadata
