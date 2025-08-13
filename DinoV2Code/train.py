@@ -52,7 +52,6 @@ def get_dataloaders(config):
     train_loader = DataLoader(
         train_dataset,
         batch_size=config.batch_size,
-        shuffle=True,
         num_workers=config.num_workers,
         sampler=sampler
     )
