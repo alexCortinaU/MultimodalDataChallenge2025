@@ -54,7 +54,7 @@ def get_dataloaders(config):
 
     train_dataset = FungiDataset(train_df, config.image_path, transform=train_transforms)
     valid_dataset = FungiDataset(val_df, config.image_path, transform=val_transforms)
-    if config.sampler is 'random':
+    if config.sampler == 'random':
         train_loader = DataLoader(
             train_dataset,
             batch_size=config.batch_size,
