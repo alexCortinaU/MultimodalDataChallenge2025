@@ -31,17 +31,6 @@ def get_dataloaders(config):
     print('Training size', len(train_df))
     print('Validation size', len(val_df))
 
-    class_weights = pd.read_csv(config.weights_dir)
-    class_weights = class_weights.sort_values(by="class", ascending=True)
-    weight_dict = dict(zip(class_weights['class'], class_weights['weight']))
-    sample_weights = [weight_dict[label] for label in
-                      train_df['class_label_column']]  # Replace with your actual label column name
-    sampler = WeightedRandomSampler(
-        weights=sample_weights,
-        num_samples=len(sample_weights),
-        replacement=True
-    )
-
     # Initialize DataLoaders
     # train_transforms, val_transforms = make_transforms(config.image_size)
     train_transforms, val_transforms = version_2_make_transforms(config.image_size)
