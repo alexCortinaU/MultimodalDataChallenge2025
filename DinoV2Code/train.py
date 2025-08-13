@@ -7,10 +7,14 @@ from model import FungiDataset, DinoV2Lit, version_2_make_transforms
 from lightning.pytorch import Trainer
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor, EarlyStopping
-
+import argparse
 
 class Config:
     def __init__(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--seed", type=int, default=42)
+        args = parser.parse_args()
+
         self.metadata_dir = "/home/malte/projects/MultimodalDataChallenge2025/metadata.csv"
         self.image_path = "/home/malte/datasets/FungiImages"
         self.weights_dir = "/home/malte/projects/MultimodalDataChallenge2025/class_weights.csv"
@@ -20,9 +24,9 @@ class Config:
         self.num_classes = 183
         self.learning_rate = 3e-4
         self.weight_decay = 1e-5
-        self.image_size = 518  # Default image size for ViT models
+        self.image_size = 518
         self.num_workers = 14
-        self.seed = 42
+        self.seed = args.seed
 
 def get_dataloaders(config):
     # Load metadata
