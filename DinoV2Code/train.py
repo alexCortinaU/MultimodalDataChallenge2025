@@ -38,10 +38,10 @@ def get_dataloaders(config):
 
     class_weights = pd.read_csv(config.weights_dir)
     class_weights = class_weights.sort_values(by="class", ascending=True)
-    sample_weights = class_weights['weight'].to_numpy().sum()
+    sample_weights = class_weights['weight'].to_numpy()
     sampler = WeightedRandomSampler(
         weights=class_weights['weight'].to_numpy()/100,
-        num_samples=sample_weights,
+        num_samples=len(sample_weights),
         replacement=True
     )
     # Initialize DataLoaders
