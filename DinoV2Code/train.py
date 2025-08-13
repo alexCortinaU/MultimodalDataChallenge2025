@@ -61,13 +61,15 @@ def get_dataloaders(config):
             num_workers=config.num_workers,
             shuffle=True
         )
-    else:
-        train_loader = DataLoader(
+    elif config.sampler == 'weighted':
+            train_loader = DataLoader(
             train_dataset,
             batch_size=config.batch_size,
             num_workers=config.num_workers,
             sampler=sampler
         )
+    else:
+        raise NotImplementedError('WRONG SAMPLER')
     valid_loader = DataLoader(valid_dataset, batch_size=config.batch_size, shuffle=False, num_workers=config.num_workers)
     return train_loader, valid_loader
 
