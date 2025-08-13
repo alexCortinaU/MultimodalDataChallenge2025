@@ -1,4 +1,3 @@
-# pip install lightning timm torchmetrics torchvision
 import torch
 import torch.nn as nn
 import timm
@@ -9,12 +8,13 @@ from torch.utils.data import Dataset
 import os
 import numpy as np
 from PIL import Image
-from torchvision import transforms
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from torch.utils.tensorboard import SummaryWriter
 import torchvision
-
+from torchvision import transforms
+from lora import QkvWithLoRA
+from functools import partial
 
 class DinoV2Lit(L.LightningModule):
     """
@@ -36,14 +36,10 @@ class DinoV2Lit(L.LightningModule):
 
         # Create backbone with no classifier head; we'll add our own.
         # timm will load DINOv2 weights for these model names.
-        self.backbone = timm.create_model(
-            model_name,
-            pretrained=True,
-            num_classes=0,   # gets feature embeddings
-        )
+
+        self.backbone = self._init_backbone(model_name)
         feat_dim = self.backbone.num_features
 
-        # Classification head
         self.head = nn.Sequential(
             nn.Dropout(drop_rate),
             nn.Linear(feat_dim, feat_dim),
@@ -51,10 +47,6 @@ class DinoV2Lit(L.LightningModule):
             nn.Linear(feat_dim, num_classes),
         )
 
-
-        if freeze_backbone:
-            for p in self.backbone.parameters():
-                p.requires_grad = False
         class_weights = pd.read_csv(class_weights_dir)
         class_weights = class_weights.sort_values(by="class", ascending=True)
         print("class weights head: ", class_weights.head())
@@ -71,6 +63,27 @@ class DinoV2Lit(L.LightningModule):
         self.train_f1 = MulticlassF1Score(num_classes=num_classes)
         self.val_f1   = MulticlassF1Score(num_classes=num_classes)
         self.test_f1  = MulticlassF1Score(num_classes=num_classes)
+
+    @staticmethod
+    def _init_backbone(model_name):
+        model = timm.create_model(
+            model_name,
+            pretrained=True,
+            num_classes=0,  # gets feature embeddings
+        )
+        assign_lora = partial(QkvWithLoRA, rank=8, alpha=1)
+        for block in model.blocks:
+            block.attn.qkv = assign_lora(block.attn.qkv)
+
+        for param in model.parameters():
+            param.requires_grad = False
+
+        for block in model.blocks:
+            for param in block.attn.qkv.lora_q.parameters():
+                param.requires_grad = True
+            for param in block.attn.qkv.lora_v.parameters():
+                param.requires_grad = True
+        return model
     
     def on_train_start(self):
         # Initialize TensorBoard writer
@@ -141,11 +154,11 @@ class DinoV2Lit(L.LightningModule):
         self.test_acc1.reset(); self.test_acc5.reset(); self.test_f1.reset()    
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(
-            self.parameters(),
-            lr=self.hparams.lr,
-            weight_decay=self.hparams.weight_decay
-        )
+        optimizer = torch.optim.AdamW([
+            {'params': self.backbone.parameters(), 'lr': self.hparams.lr * 0.1},
+            {'params': self.head.parameters(), 'lr': self.hparams.lr}
+        ], weight_decay=self.hparams.weight_decay)
+
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, mode="min", factor=0.5, patience=5
         )
@@ -157,9 +170,6 @@ class DinoV2Lit(L.LightningModule):
             }
         }
 
-# --- Optional helper: transforms you can use with a LightningDataModule ---
-# DINOv2 (lvd142m) is trained at 224x224. Adjust if you pick a 518px variant.
-from torchvision import transforms
 
 def make_transforms(image_size: int = 224):
     mean = (0.485, 0.456, 0.406)  # standard ImageNet
@@ -201,14 +211,15 @@ def version_2_make_transforms(image_size: int = 224):
         A.ColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.02, p=0.3),
 
         # camera/real-world noise (light)
-        A.ImageCompression(quality_lower=75, quality_upper=95, p=0.1),
+        A.ImageCompression(quality_range=(75, 100), p=0.1),
         A.GaussNoise(std_range=(0.01,0.09), p=0.2),
         A.MotionBlur(blur_limit=3, p=0.1),
 
         # occlusion (very light; can help robustness)
-        A.CoarseDropout(max_holes=2, max_height=0.12, max_width=0.12,
-                        min_holes=1, min_height=0.06, min_width=0.06,
-                        fill_value=0, p=0.15),
+        A.CoarseDropout(num_holes_range=(1, 2),
+                        hole_height_range=(0.06, 0.12),
+                        hole_width_range=(0.06, 0.12),
+                        fill=0, p=0.15),
 
         # normalize to your backbone’s stats (example: ImageNet)
         A.Normalize(mean=mean, std=std),

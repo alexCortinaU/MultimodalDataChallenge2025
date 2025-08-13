@@ -274,13 +274,8 @@ def evaluate_network_on_test_set(data_file, image_path, checkpoint_dir, session_
     print(f"Results saved to {output_csv_path}")
 
 if __name__ == "__main__":
-    # Path to fungi images
     image_path = '/novo/projects/shared_projects/eye_imaging/data/FungiImages/'
-    # Path to metadata file
     data_file = str('/novo/projects/shared_projects/eye_imaging/data/FungiImages/metadata.csv')
-
-    # Session name: Change session name for every experiment! 
-    # Session name will be saved as the first line of the prediction file
     session = "EfficientNet"
 
     # Folder for results of this experiment based on session name:

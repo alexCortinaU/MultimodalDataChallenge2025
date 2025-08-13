@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
-from model import FungiDataset, make_transforms, DinoV2Lit, version_2_make_transforms
+from model import FungiDataset, DinoV2Lit, version_2_make_transforms
 from lightning.pytorch import Trainer
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor, EarlyStopping
@@ -9,9 +9,9 @@ from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor, Ea
 
 class Config:
     def __init__(self):
-        self.metadata_dir = "/home/reza/Documents/Reza_projects/05_summerschool_2025/DataVisualization/metadata.csv"
-        self.image_path = "/home/reza/Documents/Reza_projects/05_summerschool_2025/FungiImages"
-        self.weights_dir = "/home/reza/Documents/Reza_projects/05_summerschool_2025/DataVisualization/class_weights.csv"
+        self.metadata_dir = "/home/malte/projects/MultimodalDataChallenge2025/metadata.csv"
+        self.image_path = "/home/malte/datasets/FungiImages"
+        self.weights_dir = "/home/malte/projects/MultimodalDataChallenge2025/class_weights.csv"
         self.vit_model_name = "vit_base_patch14_dinov2.lvd142m"
         self.epochs = 100
         self.batch_size = 32
@@ -19,7 +19,8 @@ class Config:
         self.learning_rate = 3e-4
         self.weight_decay = 1e-6
         self.image_size = 518  # Default image size for ViT models
-
+        self.num_workers = 2
+        self.image_size = 518
 
 def get_dataloaders(config):
     # Load metadata
@@ -35,8 +36,8 @@ def get_dataloaders(config):
 
     train_dataset = FungiDataset(train_df, config.image_path, transform=train_transforms)
     valid_dataset = FungiDataset(val_df, config.image_path, transform=val_transforms)
-    train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=8)
-    valid_loader = DataLoader(valid_dataset, batch_size=config.batch_size, shuffle=False, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=0)
+    valid_loader = DataLoader(valid_dataset, batch_size=config.batch_size, shuffle=False, num_workers=0)
     return train_loader, valid_loader
 
 def pl_trainer(config):
@@ -47,7 +48,7 @@ def pl_trainer(config):
         model_name=config.vit_model_name,
         lr=config.learning_rate,
         weight_decay=config.weight_decay,
-        freeze_backbone=False,
+        freeze_backbone=True,
         drop_rate=0.1,
     )
 
