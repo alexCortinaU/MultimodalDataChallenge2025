@@ -16,7 +16,7 @@ class Config:
         self.weights_dir = "/home/malte/projects/MultimodalDataChallenge2025/class_weights.csv"
         self.vit_model_name = "vit_large_patch14_dinov2.lvd142m"
         self.epochs = 100
-        self.batch_size = 12
+        self.batch_size = 16
         self.num_classes = 183
         self.learning_rate = 3e-4
         self.weight_decay = 1e-6
