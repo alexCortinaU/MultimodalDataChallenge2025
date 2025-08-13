@@ -19,7 +19,7 @@ class Config:
         self.learning_rate = 3e-4
         self.weight_decay = 1e-6
         self.image_size = 518  # Default image size for ViT models
-        self.num_workers = 2
+        self.num_workers = 24
         self.image_size = 518
 
 def get_dataloaders(config):
@@ -36,8 +36,8 @@ def get_dataloaders(config):
 
     train_dataset = FungiDataset(train_df, config.image_path, transform=train_transforms)
     valid_dataset = FungiDataset(val_df, config.image_path, transform=val_transforms)
-    train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=0)
-    valid_loader = DataLoader(valid_dataset, batch_size=config.batch_size, shuffle=False, num_workers=0)
+    train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=config.num_workers)
+    valid_loader = DataLoader(valid_dataset, batch_size=config.batch_size, shuffle=False, num_workers=config.num_workers)
     return train_loader, valid_loader
 
 def pl_trainer(config):
