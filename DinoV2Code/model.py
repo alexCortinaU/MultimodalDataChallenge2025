@@ -189,7 +189,7 @@ def version_2_make_transforms(image_size: int = 224):
         A.ColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.02, p=0.3),
 
         # camera/real-world noise (light)
-        A.ImageCompression(quality_range=(75, 100), p=0.1),
+        A.ImageCompression(quality_range=(75, 100), p=0.2),
         A.GaussNoise(std_range=(0.01,0.09), p=0.2),
         A.MotionBlur(blur_limit=3, p=0.1),
 
@@ -197,7 +197,7 @@ def version_2_make_transforms(image_size: int = 224):
         A.CoarseDropout(num_holes_range=(1, 2),
                         hole_height_range=(0.06, 0.12),
                         hole_width_range=(0.06, 0.12),
-                        fill=0, p=0.15),
+                        fill=0, p=0.2),
 
         # normalize to your backbone’s stats (example: ImageNet)
         A.Normalize(mean=mean, std=std),
