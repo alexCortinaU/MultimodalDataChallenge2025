@@ -170,26 +170,6 @@ class DinoV2Lit(L.LightningModule):
         }
 
 
-def make_transforms(image_size: int = 224):
-    mean = (0.485, 0.456, 0.406)  # standard ImageNet
-    std  = (0.229, 0.224, 0.225)
-    train_tf = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.RandomResizedCrop(image_size, scale=(0.6, 1.0)),
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomVerticalFlip(p=0.5),
-        transforms.GaussianBlur(kernel_size=3),
-        transforms.Normalize(mean, std),
-    ])
-    val_tf = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Resize(int(image_size * 1.14)),
-        transforms.CenterCrop(image_size),
-        transforms.Normalize(mean, std),
-    ])
-    return train_tf, val_tf
-
-
 def version_2_make_transforms(image_size: int = 224):
     mean = (0.485, 0.456, 0.406)  # standard ImageNet
     std  = (0.229, 0.224, 0.225)
