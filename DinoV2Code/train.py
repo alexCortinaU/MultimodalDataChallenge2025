@@ -38,9 +38,11 @@ def get_dataloaders(config):
 
     class_weights = pd.read_csv(config.weights_dir)
     class_weights = class_weights.sort_values(by="class", ascending=True)
-    sample_weights = class_weights['weight'].to_numpy()
+    sample_weights = train_df['taxonID_index'].astype(int).map(
+        dict(zip(class_weights['class'], class_weights['weight'] / 100))
+    ).values
     sampler = WeightedRandomSampler(
-        weights=class_weights['weight'].to_numpy()/100,
+        weights=sample_weights,
         num_samples=len(train_df),
         replacement=True
     )
