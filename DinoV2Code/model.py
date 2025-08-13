@@ -28,7 +28,6 @@ class DinoV2Lit(L.LightningModule):
         model_name: str,
         lr: float,
         weight_decay: float,
-        freeze_backbone: bool,
         drop_rate: float,
     ):
         super().__init__()

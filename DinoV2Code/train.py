@@ -14,30 +14,44 @@ class Config:
         self.metadata_dir = "/home/malte/projects/MultimodalDataChallenge2025/metadata.csv"
         self.image_path = "/home/malte/datasets/FungiImages"
         self.weights_dir = "/home/malte/projects/MultimodalDataChallenge2025/class_weights.csv"
-        self.vit_model_name = "vit_large_patch14_dinov2.lvd142m"
-        self.epochs = 100
-        self.batch_size = 16
+        self.vit_model_name = "vit_base_patch14_dinov2.lvd142m"
+        self.epochs = 200
+        self.batch_size = 32
         self.num_classes = 183
         self.learning_rate = 3e-4
         self.weight_decay = 1e-6
         self.image_size = 518  # Default image size for ViT models
         self.num_workers = 14
+        self.seed = 42
 
 def get_dataloaders(config):
     # Load metadata
     df = pd.read_csv(config.metadata_dir)
     train_df = df[df['filename_index'].str.startswith('fungi_train')]
-    train_df, val_df = train_test_split(train_df, test_size=0.2, random_state=42)
+    train_df, val_df = train_test_split(train_df, test_size=0.2, random_state=config.seed)
     print('Training size', len(train_df))
     print('Validation size', len(val_df))
 
+    class_weights = pd.read_csv(config.weights_dir)
+    class_weights = class_weights.sort_values(by="class", ascending=True)
+    sample_weights = class_weights['weight'].to_numpy().sum()
+    sampler = WeightedRandomSampler(
+        weights=class_weights['weight'].to_numpy()/100,
+        num_samples=sample_weights,
+        replacement=True
+    )
     # Initialize DataLoaders
-    # train_transforms, val_transforms = make_transforms(config.image_size)
     train_transforms, val_transforms = version_2_make_transforms(config.image_size)
 
     train_dataset = FungiDataset(train_df, config.image_path, transform=train_transforms)
     valid_dataset = FungiDataset(val_df, config.image_path, transform=val_transforms)
-    train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=config.num_workers)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=config.batch_size,
+        shuffle=True,
+        num_workers=config.num_workers,
+        sampler=sampler
+    )
     valid_loader = DataLoader(valid_dataset, batch_size=config.batch_size, shuffle=False, num_workers=config.num_workers)
     return train_loader, valid_loader
 
@@ -49,7 +63,6 @@ def pl_trainer(config):
         model_name=config.vit_model_name,
         lr=config.learning_rate,
         weight_decay=config.weight_decay,
-        freeze_backbone=True,
         drop_rate=0.1,
     )
 
