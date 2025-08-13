@@ -41,7 +41,7 @@ def get_dataloaders(config):
     sample_weights = class_weights['weight'].to_numpy()
     sampler = WeightedRandomSampler(
         weights=class_weights['weight'].to_numpy()/100,
-        num_samples=len(sample_weights),
+        num_samples=len(train_df),
         replacement=True
     )
     # Initialize DataLoaders
