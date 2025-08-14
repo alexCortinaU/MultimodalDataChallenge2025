@@ -30,6 +30,7 @@ class DinoV2Lit(L.LightningModule):
         lr: float,
         weight_decay: float,
         drop_rate: float,
+
     ):
         super().__init__()
         self.save_hyperparameters()
