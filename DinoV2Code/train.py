@@ -20,8 +20,8 @@ class Config:
         self.metadata_dir = "/home/malte/projects/MultimodalDataChallenge2025/metadata.csv"
         self.image_path = "/home/malte/datasets/FungiImages"
         self.weights_dir = "/home/malte/projects/MultimodalDataChallenge2025/class_weights.csv"
-        self.vit_model_name = "vit_base_patch14_dinov2.lvd142m"
-        self.epochs = 200
+        self.vit_model_name = "vit_large_patch14_dinov2.lvd142m"
+        self.epochs = 15
         self.batch_size = 32
         self.num_classes = 183
         self.learning_rate = 3e-4

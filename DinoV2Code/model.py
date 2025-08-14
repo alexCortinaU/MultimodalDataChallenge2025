@@ -177,7 +177,7 @@ def version_2_make_transforms(image_size: int = 224):
     train_tf = A.Compose([
 
         # geometry: small + plausible
-        A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.10, rotate_limit=20,
+        A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.10, rotate_limit=25,
                         border_mode=1, p=0.7),   # reflection padding
         A.HorizontalFlip(p=0.5),                    # most fungi have no left/right bias
         A.VerticalFlip(p=0.5),                      # use if orientation isn’t meaningful
@@ -185,13 +185,13 @@ def version_2_make_transforms(image_size: int = 224):
 
         # photometric: conservative to keep species colour cues
         A.RandomBrightnessContrast(brightness_limit=0.08, contrast_limit=0.08, p=0.5),
-        # A.HueSaturationValue(hue_shift_limit=6, sat_shift_limit=10, val_shift_limit=6, p=0.4),
+        A.HueSaturationValue(hue_shift_limit=6, sat_shift_limit=10, val_shift_limit=6, p=0.3),
         A.ColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.02, p=0.3),
 
         # camera/real-world noise (light)
         A.ImageCompression(quality_range=(75, 100), p=0.2),
         A.GaussNoise(std_range=(0.01,0.09), p=0.2),
-        A.MotionBlur(blur_limit=3, p=0.1),
+        A.MotionBlur(blur_limit=3, p=0.2),
 
         # occlusion (very light; can help robustness)
         A.CoarseDropout(num_holes_range=(1, 2),
