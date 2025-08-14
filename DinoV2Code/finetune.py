@@ -8,7 +8,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.decomposition import PCA
 import numpy as np
 
-def create_embedding_map(tokens, n_components=12):
+def create_embedding_map(tokens, output_path, n_components=12):
     model = SentenceTransformer("all-MiniLM-L6-v2")
     embeddings = model.encode(tokens)
     pca = PCA(n_components=n_components)
@@ -17,26 +17,30 @@ def create_embedding_map(tokens, n_components=12):
     return embedding_map
 
 
-def train_random_forest(logits_path):
+def train_random_forest(logits_path, output_path):
     config = Config()
     df_meta = pd.read_csv(config.metadata_dir)
 
-    df_train = df_meta[df_meta['filename_index'].str.startswith('fungi_train')]
-    df_train.loc[:, 'taxonID_index'] = df_train['taxonID_index'].astype(int)
+    df_train = df_meta[df_meta['filename_index'].str.startswith('fungi_train')].reset_index()
+    df_test = df_meta[df_meta['filename_index'].str.startswith('fungi_test')].reset_index()
+
+    df_train['taxonID_index'] = df_train['taxonID_index'].astype(int)
 
     df_logits = pd.read_csv(logits_path, skiprows=1)
-    filename_to_label = dict(zip(df_train['filename_index'], df_train['taxonID_index']))
+    df_logits_train = df_logits[df_logits['filename_index'].str.startswith('fungi_train')].reset_index()
+    df_logits_test = df_logits[df_logits['filename_index'].str.startswith('fungi_test')].reset_index()
 
-    mask = df_logits['filename'].isin(filename_to_label.keys())
-    df_logits_filtered = df_logits[mask].copy()
-    y = df_logits_filtered['filename'].map(filename_to_label).values
+    print("First 10 logits filenames:")
+    print(df_logits_train['filename_index'].head(10))
 
-    # Features (all columns except filename)
-    x = df_logits_filtered.iloc[:, 1:].values
+    print("\nFirst 10 metadata filenames:")
+    print(df_train['filename_index'].head(10))
 
-    # Train-validation split
+    print(df_logits_train.filename)
+    print(df_train.filename_index)
+
     x_train, x_val, y_train, y_val = train_test_split(
-        x, y, test_size=0.2, random_state=config.seed, stratify=y
+        df_logits_train, y, test_size=0.2, random_state=config.seed, stratify=y
     )
 
     clf = RandomForestClassifier(
@@ -56,12 +60,14 @@ def train_random_forest(logits_path):
     importance = clf.feature_importances_
     print(f"Top 5 feature indices: {np.argsort(importance)[-5:][::-1]}")
 
-    # Save model
-    joblib.dump(clf, "random_forest_model.joblib")
-    print("Model saved to random_forest_model.joblib")
+    with open(output_path, 'w') as f:
+        f.write('random_fungi_predictions\n')  # Description line
+        for filename, pred in zip(filenames, predictions):
+            f.write(f'{filename},{pred}\n')
 
-    return clf, acc
-
+    print(f"Predictions saved to {output_path}")
+    print(f"Generated {len(predictions)} predictions for test set")
+    return output_path
 
 if __name__ == "__main__":
-    train_random_forest('vit_v1_test_logits.csv')
+    train_random_forest('vit_v1_test_logits.csv', 'return_of_the_vit')
