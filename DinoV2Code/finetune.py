@@ -32,7 +32,7 @@ def train_random_forest(logits_path, output_path):
     df_logits_train = df_logits_train.iloc[:, 1:]
 
     x_train, x_val, y_train, y_val = train_test_split(
-        df_logits_train,  df_train['taxonID_index'].values, test_size=0.2, random_state=config.seed, stratify=y
+        df_logits_train,  df_train['taxonID_index'].values, test_size=0.2, random_state=config.seed,
     )
 
     clf = RandomForestClassifier(
