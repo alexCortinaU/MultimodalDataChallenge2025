@@ -22,7 +22,7 @@ def test_model(session_name, output_csv_path):
     train_transforms, val_transforms = version_2_make_transforms(config.image_size)
     df = pd.read_csv(config.metadata_dir)
     test_df = df[df['filename_index'].str.startswith('fungi_test')]
-    test_dataset = FungiDataset(test_df, config.image_path, transform=val_transforms, file_name=True)
+    test_dataset = FungiDataset(test_df, config.image_path, transform=val_transforms, file_name=True, full_df=df)
     test_loader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False, num_workers=4)
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'

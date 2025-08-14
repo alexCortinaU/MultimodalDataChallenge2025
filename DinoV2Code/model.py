@@ -12,8 +12,9 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from torch.utils.tensorboard import SummaryWriter
 import torchvision
-from torchvision import transforms
+from sentence_transformers import SentenceTransformer
 from lora import QkvWithLoRA
+from sklearn.decomposition import PCA
 from functools import partial
 
 class DinoV2Lit(L.LightningModule):
@@ -158,7 +159,7 @@ class DinoV2Lit(L.LightningModule):
         ], weight_decay=self.hparams.weight_decay)
 
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=10000, eta_min=1e-8
+            optimizer, T_max=10000, eta_min=1e-6
         )
         return {
             "optimizer": optimizer,
@@ -213,17 +214,36 @@ def version_2_make_transforms(image_size: int = 224):
     return train_tf, val_tf
 
 class FungiDataset(Dataset):
-    def __init__(self, df, path, transform=None, file_name=False):
+    def __init__(self, df, path, transform=None, file_name=False, full_df=None):
         self.df = df
         self.transform = transform
         self.path = path
         self.file_name = file_name
 
+        if full_df is not None:
+            self.habitat_emb_map = self._get_embedding_map(full_df['Habitat'].unique())
+            self.substrate_emb_map = self._get_embedding_map(full_df['Substrate'].unique())
+
+    def _get_embedding_map(self, tokens, n_components=12):
+        model = SentenceTransformer("all-MiniLM-L6-v2")
+        embeddings = model.encode(tokens)
+        pca = PCA(n_components=n_components)
+        embeddings = pca.fit_transform(embeddings)
+        embedding_map = dict(zip(tokens, embeddings))
+        return embedding_map
+
     def __len__(self):
         return len(self.df)
 
+    def _meta_data_encoder(self, row):
+        habitat_embedding = self.habitat_emb_map[row['Habitat']]
+        substrate_embedding = self.substrate_emb_map[row['Substrate']]
+        return np.concat([habitat_embedding, substrate_embedding])
+
     def __getitem__(self, idx):
         file_path = self.df['filename_index'].values[idx]
+
+        embeddings = self._meta_data_encoder(self.df.iloc[idx])
         # Get label if it exists; otherwise return None
         label = self.df['taxonID_index'].values[idx]  # Get label
         if pd.isnull(label):

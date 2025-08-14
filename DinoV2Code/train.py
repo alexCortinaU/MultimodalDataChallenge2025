@@ -22,12 +22,12 @@ class Config:
         self.weights_dir = "/home/malte/projects/MultimodalDataChallenge2025/class_weights.csv"
         self.vit_model_name = "vit_base_patch14_dinov2.lvd142m"
         self.epochs = 15
-        self.batch_size = 32
+        self.batch_size = 2
         self.num_classes = 183
         self.learning_rate = 3e-4
         self.weight_decay = 1e-5
         self.image_size = 518
-        self.num_workers = 14
+        self.num_workers = 0
         self.seed = args.seed
         self.sampler = args.sampler
 
@@ -52,8 +52,8 @@ def get_dataloaders(config):
     # Initialize DataLoaders
     train_transforms, val_transforms = version_2_make_transforms(config.image_size)
 
-    train_dataset = FungiDataset(train_df, config.image_path, transform=train_transforms)
-    valid_dataset = FungiDataset(val_df, config.image_path, transform=val_transforms)
+    train_dataset = FungiDataset(train_df, config.image_path, transform=train_transforms, full_df=df)
+    valid_dataset = FungiDataset(val_df, config.image_path, transform=val_transforms, full_df=df)
     if config.sampler == 'random':
         train_loader = DataLoader(
             train_dataset,
@@ -75,7 +75,6 @@ def get_dataloaders(config):
 
 def pl_trainer(config):
     train_loader, valid_loader = get_dataloaders(config)
-    print('NUME STEPS: ', int(len(train_loader)*config.epochs))
     model = DinoV2Lit(
         class_weights_dir=config.weights_dir,
         num_classes=config.num_classes,
