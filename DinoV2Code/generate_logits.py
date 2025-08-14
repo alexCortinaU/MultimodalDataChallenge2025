@@ -68,7 +68,7 @@ def save_logits_and_embeddings(model_name, logits_csv_path, emb_csv_path):
 
 
 if __name__ == "__main__":
-    ckpt = 'vit-v4'
+    ckpt = 'vit_f1.ckpt'
     save_logits_and_embeddings(
         model_name=ckpt,
         logits_csv_path=f'{ckpt}_logits.csv',
