@@ -52,8 +52,8 @@ def train_random_forest(logits_path, output_path):
     filenames = df_logits_test['filename'].values
 
     # Save predictions
-    with open(output_path, 'w') as f:
-        f.write('random_fungi_predictions\n')
+    with open(f'{output_path}.csv', 'w') as f:
+        f.write('vit_is_all_you_need\n')
         for filename, pred in zip(filenames, predictions):
             f.write(f'{filename},{pred}\n')
 
@@ -62,4 +62,4 @@ def train_random_forest(logits_path, output_path):
     return output_path
 
 if __name__ == "__main__":
-    train_random_forest('vit_v1_test_logits.csv', 'return_of_the_vit')
+    train_random_forest('vit_v1_test_logits.csv', 'vit_rf')
