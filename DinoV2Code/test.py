@@ -10,7 +10,7 @@ def test_model(session_name, output_csv_path):
     config = Config()
 
     # Initialize the model
-    model = DinoV2Lit.load_from_checkpoint('./checkpoints/vit-v6.ckpt',
+    model = DinoV2Lit.load_from_checkpoint('./checkpoints/vit-v4.ckpt',
                                             class_weights_dir=config.weights_dir,
                                             num_classes=config.num_classes,
                                             model_name=config.vit_model_name,
@@ -43,4 +43,4 @@ def test_model(session_name, output_csv_path):
 
 if __name__ == "__main__":
     # test_model(session_name='vit_version_1', output_csv_path='vit_version_1.csv') # pretrained vit on df
-    test_model(session_name='baseline_vit_v6', output_csv_path='vit_v6.csv') # pretrained vit on df
+    test_model(session_name='baseline_vit_v4', output_csv_path='vit_v4.csv') # pretrained vit on df
