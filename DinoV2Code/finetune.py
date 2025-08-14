@@ -29,7 +29,9 @@ def train_random_forest(logits_path, output_path):
     df_logits = pd.read_csv(logits_path, skiprows=1)
     df_logits_train = df_logits[df_logits['filename'].str.startswith('fungi_train')].reset_index()
     df_logits_test = df_logits[df_logits['filename'].str.startswith('fungi_test')].reset_index()
-    df_logits_train = df_logits_train.iloc[:, 1:]
+
+
+    df_logits_train = df_logits_train.iloc[:, 2:]
 
     print(df_train['taxonID_index'].head())
     print(df_logits_train.head())
