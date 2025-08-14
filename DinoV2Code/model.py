@@ -213,10 +213,11 @@ def version_2_make_transforms(image_size: int = 224):
     return train_tf, val_tf
 
 class FungiDataset(Dataset):
-    def __init__(self, df, path, transform=None):
+    def __init__(self, df, path, transform=None, file_name=False):
         self.df = df
         self.transform = transform
         self.path = path
+        self.file_name = file_name
 
     def __len__(self):
         return len(self.df)
@@ -238,4 +239,7 @@ class FungiDataset(Dataset):
         # Apply transformations if available
         if self.transform:
             image = self.transform(image = image)
-        return image['image'], label
+        if self.file_name:
+            return image['image'], label, file_path
+        else:
+            return image['image'], label
