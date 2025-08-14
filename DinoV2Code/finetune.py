@@ -31,6 +31,8 @@ def train_random_forest(logits_path, output_path):
     df_logits_test = df_logits[df_logits['filename'].str.startswith('fungi_test')].reset_index()
     df_logits_train = df_logits_train.iloc[:, 1:]
 
+    print(df_train['taxonID_index'].head())
+    print(df_logits_train.head())
     x_train, x_val, y_train, y_val = train_test_split(
         df_logits_train,  df_train['taxonID_index'].values, test_size=0.2, random_state=config.seed,
     )
