@@ -22,7 +22,7 @@ class Config:
         self.weights_dir = "/home/malte/projects/MultimodalDataChallenge2025/class_weights.csv"
         self.vit_model_name = "vit_base_patch14_dinov2.lvd142m"
         self.epochs = 15
-        self.batch_size = 16
+        self.batch_size = 32
         self.num_classes = 183
         self.learning_rate = 3e-4
         self.weight_decay = 1e-5
@@ -75,6 +75,7 @@ def get_dataloaders(config):
 
 def pl_trainer(config):
     train_loader, valid_loader = get_dataloaders(config)
+    print('NUME STEPS: ', int(len(train_loader)*config.epochs))
     model = DinoV2Lit(
         class_weights_dir=config.weights_dir,
         num_classes=config.num_classes,
