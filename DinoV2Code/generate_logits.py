@@ -11,7 +11,7 @@ def save_logits_and_embeddings(model_name, logits_csv_path, emb_csv_path):
     config = Config()
 
     model = DinoV2Lit.load_from_checkpoint(
-        './checkpoints/vit-v4.ckpt',
+        f'./checkpoints/{model_name}.ckpt',
         class_weights_dir=config.weights_dir,
         num_classes=config.num_classes,
         model_name=config.vit_model_name,
