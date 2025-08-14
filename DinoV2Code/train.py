@@ -20,7 +20,7 @@ class Config:
         self.metadata_dir = "/home/malte/projects/MultimodalDataChallenge2025/metadata.csv"
         self.image_path = "/home/malte/datasets/FungiImages"
         self.weights_dir = "/home/malte/projects/MultimodalDataChallenge2025/class_weights.csv"
-        self.vit_model_name = "vit_large_patch14_dinov2.lvd142m"
+        self.vit_model_name = "vit_base_patch14_dinov2.lvd142m"
         self.epochs = 15
         self.batch_size = 16
         self.num_classes = 183
@@ -80,6 +80,7 @@ def pl_trainer(config):
         num_classes=config.num_classes,
         model_name=config.vit_model_name,
         lr=config.learning_rate,
+        num_steps=int(len(train_loader)*config.epochs),
         weight_decay=config.weight_decay,
         drop_rate=0.1,
     )
