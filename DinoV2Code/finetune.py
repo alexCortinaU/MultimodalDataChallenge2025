@@ -29,18 +29,10 @@ def train_random_forest(logits_path, output_path):
     df_logits = pd.read_csv(logits_path, skiprows=1)
     df_logits_train = df_logits[df_logits['filename'].str.startswith('fungi_train')].reset_index()
     df_logits_test = df_logits[df_logits['filename'].str.startswith('fungi_test')].reset_index()
-
-    print("First 10 logits filenames:")
-    print(df_logits_train['filename'].head(10))
-
-    print("\nFirst 10 metadata filenames:")
-    print(df_train['filename_index'].head(10))
-
-    print(df_logits_train.filename)
-    print(df_train.filename_index)
+    df_logits_train = df_logits_train.iloc[:, 1:]
 
     x_train, x_val, y_train, y_val = train_test_split(
-        df_logits_train, y, test_size=0.2, random_state=config.seed, stratify=y
+        df_logits_train,  df_train['taxonID_index'].values, test_size=0.2, random_state=config.seed, stratify=y
     )
 
     clf = RandomForestClassifier(
@@ -56,12 +48,12 @@ def train_random_forest(logits_path, output_path):
     acc = accuracy_score(y_val, y_pred)
     print(f"Validation accuracy: {acc:.4f}")
 
-    # Feature importance
-    importance = clf.feature_importances_
-    print(f"Top 5 feature indices: {np.argsort(importance)[-5:][::-1]}")
+    predictions = clf.predict(df_logits_test.iloc[:, 1:])
+    filenames = df_logits_test['filename'].values
 
+    # Save predictions
     with open(output_path, 'w') as f:
-        f.write('random_fungi_predictions\n')  # Description line
+        f.write('random_fungi_predictions\n')
         for filename, pred in zip(filenames, predictions):
             f.write(f'{filename},{pred}\n')
 
