@@ -59,7 +59,7 @@ def train_random_forest(logits_path, output_path):
     search = RandomizedSearchCV(
         clf,
         param_distributions=param_dist,
-        n_iter=30,
+        n_iter=5,
         scoring=make_scorer(f1_score, average='macro'),
         cv=3,
         verbose=1,
