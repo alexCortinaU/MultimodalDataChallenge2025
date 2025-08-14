@@ -21,11 +21,10 @@ def save_logits(model_name, output_csv_path):
         drop_rate=0.1,
     )
 
-    train_transforms, val_transforms = version_2_make_transforms(config.image_size)
+    _, val_transforms = version_2_make_transforms(config.image_size)
     df = pd.read_csv(config.metadata_dir)
-    test_df = df[df['filename_index'].str.startswith('fungi_test')]
-    test_dataset = FungiDataset(test_df, config.image_path, transform=val_transforms, file_name=True, full_df=df)
-    test_loader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False, num_workers=4)
+    df = FungiDataset(df, config.image_path, transform=val_transforms, file_name=True, full_df=df)
+    dataloader = DataLoader(df, batch_size=config.batch_size, shuffle=False, num_workers=12)
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model.to(device)
@@ -38,7 +37,7 @@ def save_logits(model_name, output_csv_path):
         writer.writerow(header)
 
         with torch.no_grad():
-            for images, labels, filenames in tqdm.tqdm(test_loader, desc="Extracting logits"):
+            for images, labels, filenames in tqdm.tqdm(dataloader, desc="Extracting logits"):
                 images = images.to(device)
                 logits = model(images)
                 logits_np = logits.cpu().numpy()
