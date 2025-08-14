@@ -52,8 +52,8 @@ def train_random_forest(logits_path, output_path):
     acc = accuracy_score(y_val, y_pred)
     print(f"Validation accuracy: {acc:.4f}")
 
-    predictions = clf.predict(df_logits_test.iloc[:, 2:])
     filenames = df_logits_test['filename'].values
+    predictions = clf.predict(df_logits_test.iloc[:, 2:])
 
     # Save predictions
     with open(f'{output_path}.csv', 'w') as f:
