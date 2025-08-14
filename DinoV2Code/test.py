@@ -21,7 +21,7 @@ def test_model(session_name, output_csv_path):
 
     train_transforms, val_transforms = version_2_make_transforms(config.image_size)
     df = pd.read_csv(config.metadata_dir)
-    test_df = df[df['filename_index'].str.startswith('fungi_test')]
+    test_df = df[df['filename_index'].str.startswith('fungi_final')]
     test_dataset = FungiDataset(test_df, config.image_path, transform=val_transforms, file_name=True, full_df=df)
     test_loader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False, num_workers=4)
     
@@ -43,4 +43,4 @@ def test_model(session_name, output_csv_path):
 
 if __name__ == "__main__":
     # test_model(session_name='vit_version_1', output_csv_path='vit_version_1.csv') # pretrained vit on df
-    test_model(session_name='viiiiiit', output_csv_path='vit_f1.csv') # pretrained vit on df
+    test_model(session_name='go vit or go home', output_csv_path='vit_final.csv') # pretrained vit on df

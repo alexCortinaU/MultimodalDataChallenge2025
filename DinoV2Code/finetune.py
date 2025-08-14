@@ -1,8 +1,7 @@
 from train import Config
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split, RandomizedSearchCV
-from sklearn.metrics import f1_score, make_scorer
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import joblib
 from sentence_transformers import SentenceTransformer
@@ -24,8 +23,8 @@ def train_random_forest(logits_path, output_path):
 
     df_train = df_meta[df_meta['filename_index'].str.startswith('fungi_train')].reset_index()
     df_test = df_meta[df_meta['filename_index'].str.startswith('fungi_test')].reset_index()
-    #habitat_emb = create_embedding_map(df_train['Habitat'])
-    #substrate_emb = create_embedding_map(df_train['Habitat'])
+    habitat_emb = create_embedding_map(df_train['Habitat'])
+    substrate_emb = create_embedding_map(df_train['Habitat'])
 
     df_train['taxonID_index'] = df_train['taxonID_index'].astype(int)
 
@@ -41,36 +40,12 @@ def train_random_forest(logits_path, output_path):
         df_logits_train,  df_train['taxonID_index'].values, test_size=0.2, random_state=config.seed,
     )
 
-    # Hyperparameter space
-    param_dist = {
-        'n_estimators': [200, 500, 800, 1200],
-        'max_depth': [None, 10, 20, 30, 50],
-        'min_samples_split': [2, 5, 10],
-        'min_samples_leaf': [1, 2, 4],
-        'max_features': ['sqrt', 'log2', None]
-    }
-
     clf = RandomForestClassifier(
+        n_estimators=500,
         n_jobs=-1,
         random_state=config.seed,
-        class_weight='balanced'
+        class_weight='balanced'  # Handle class imbalance
     )
-
-    search = RandomizedSearchCV(
-        clf,
-        param_distributions=param_dist,
-        n_iter=3,
-        scoring=make_scorer(f1_score, average='macro'),
-        cv=2,
-        verbose=1,
-        random_state=config.seed,
-        n_jobs=-1
-    )
-
-    search.fit(x_train, y_train)
-
-    print("Best parameters:", search.best_params_)
-    print("Best CV macro F1:", search.best_score_)
     clf.fit(x_train, y_train)
 
     # Evaluate
