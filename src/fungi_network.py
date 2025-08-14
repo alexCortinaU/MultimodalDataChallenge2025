@@ -9,16 +9,13 @@ from albumentations import Compose, Normalize, Resize
 from albumentations import RandomResizedCrop, HorizontalFlip, VerticalFlip, RandomBrightnessContrast
 from albumentations.pytorch import ToTensorV2
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from torchvision import models
 from sklearn.model_selection import train_test_split
-from logging import getLogger, DEBUG, FileHandler, Formatter, StreamHandler
 import tqdm
 import numpy as np
 from PIL import Image
 import time
 import csv
-from collections import Counter
 
 def ensure_folder(folder):
     """
