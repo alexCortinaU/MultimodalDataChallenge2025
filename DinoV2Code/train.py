@@ -81,7 +81,6 @@ def pl_trainer(config):
         num_classes=config.num_classes,
         model_name=config.vit_model_name,
         lr=config.learning_rate,
-        num_steps=int(len(train_loader)*config.epochs),
         weight_decay=config.weight_decay,
         drop_rate=0.1,
     )
