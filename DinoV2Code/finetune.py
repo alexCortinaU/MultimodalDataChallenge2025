@@ -27,11 +27,11 @@ def train_random_forest(logits_path, output_path):
     df_train['taxonID_index'] = df_train['taxonID_index'].astype(int)
 
     df_logits = pd.read_csv(logits_path, skiprows=1)
-    df_logits_train = df_logits[df_logits['filename_index'].str.startswith('fungi_train')].reset_index()
-    df_logits_test = df_logits[df_logits['filename_index'].str.startswith('fungi_test')].reset_index()
+    df_logits_train = df_logits[df_logits['filename'].str.startswith('fungi_train')].reset_index()
+    df_logits_test = df_logits[df_logits['filename'].str.startswith('fungi_test')].reset_index()
 
     print("First 10 logits filenames:")
-    print(df_logits_train['filename_index'].head(10))
+    print(df_logits_train['filename'].head(10))
 
     print("\nFirst 10 metadata filenames:")
     print(df_train['filename_index'].head(10))
