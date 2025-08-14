@@ -61,7 +61,7 @@ def train_random_forest(logits_path, output_path):
         param_distributions=param_dist,
         n_iter=5,
         scoring=make_scorer(f1_score, average='macro'),
-        cv=3,
+        cv=1,
         verbose=1,
         random_state=config.seed,
         n_jobs=-1
