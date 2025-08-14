@@ -100,6 +100,14 @@ def pl_trainer(config):
         save_last=True,           # also keep last checkpoint
         filename="vit",  # customize as you like
     )
+    checkpoint_f1 = ModelCheckpoint(
+        dirpath="checkpoints",  # save checkpoints here
+        monitor="val/f1",
+        mode="max",
+        save_top_k=1,
+        save_last=True,# also keep last checkpoint
+        filename="vit_f1",  # customize as you like
+    )
 
     # (optional) LR monitor & early stopping
     lr_monitor = LearningRateMonitor(logging_interval="step")
@@ -111,7 +119,7 @@ def pl_trainer(config):
         devices="auto",           # e.g., 1 or [0] or "auto"
         precision="16-mixed",     # or "32-true"
         logger=tb_logger,
-        callbacks=[checkpoint_cb, lr_monitor, early_stop],
+        callbacks=[checkpoint_cb, checkpoint_f1, lr_monitor, early_stop],
         log_every_n_steps=1,
     )
 

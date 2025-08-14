@@ -28,7 +28,6 @@ class DinoV2Lit(L.LightningModule):
         model_name: str,
         lr: float,
         weight_decay: float,
-        num_steps: int,
         drop_rate: float,
     ):
         super().__init__()
@@ -159,13 +158,13 @@ class DinoV2Lit(L.LightningModule):
         ], weight_decay=self.hparams.weight_decay)
 
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=self.hparams.num_steps, eta_min=1e-8
+            optimizer, T_max=10000, eta_min=1e-8
         )
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
-                "monitor": "val_loss"
+                'interval': 'step'
             }
         }
 
